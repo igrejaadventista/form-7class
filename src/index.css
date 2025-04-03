@@ -13,3 +13,32 @@ select {
     font-size: 16px; /* Prevents iOS zoom on focus */
   }
 }
+
+/* Language-specific styling and fixes */
+html[lang="en"] .translation-container,
+html[lang="es"] .translation-container,
+html[lang="pt"] .translation-container {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* Ensure text doesn't overflow in translated content */
+.text-overflow-ellipsis {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Fix for select elements with long translated options */
+select option {
+  white-space: normal;
+}
+
+/* Ensure proper text direction for all languages */
+[dir="ltr"] {
+  text-align: left;
+}
+
+[dir="rtl"] {
+  text-align: right;
+}
