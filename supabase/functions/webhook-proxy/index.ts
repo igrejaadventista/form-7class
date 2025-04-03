@@ -13,11 +13,11 @@ Deno.serve(async (req) => {
     const formData = await req.json();
 
     console.log('Sending request to webhook:', {
-      url: 'https://autoflow.adv.st/webhook-test/7class',
+      url: 'https://autoflow.adv.st/webhook/7class',
       data: formData,
     });
 
-    const response = await fetch('https://autoflow.adv.st/webhook-test/7class', {
+    const response = await fetch('https://autoflow.adv.st/webhook/7class', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

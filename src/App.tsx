@@ -62,7 +62,7 @@ const countryAssociations = {
     "(ES) Associação Espírito Santense - AES / USeB",
     "(ES) Associação Sul Espírito Santense - ASES / USeB",
     "(GO) Associação Brasil Central - ABC / UCOB",
-    "(MA) Associação Maranhense - UNB",
+    "(MA) Associação Maranhense - AMA / UNB",
     "(MA) Associação Sul-Maranhense - ASuMa / UNB",
     "(MA) Missão Nordeste Maranhense - MNeM / UNB",
     "(MA) Missão Oeste do Pará - MOPa / UNB",
@@ -145,7 +145,7 @@ const countryAssociations = {
 ;
 
 async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<WebhookResponse> {
-  const WEBHOOK_URL = `https://autoflow.adv.st/webhook-test/7class`;
+  const WEBHOOK_URL = `https://autoflow.adv.st/webhook/7class`;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
