@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>7Class</title>
+    <script>
+      // Detect browser language and store it in localStorage
+      (function() {
+        try {
+          // Get browser language (e.g. 'en-US', 'pt-BR')
+          const browserLang = navigator.language || navigator.userLanguage;
+          // Extract the language code (e.g. 'en', 'pt')
+          const langCode = browserLang.split('-')[0].toLowerCase();
+          // Store in localStorage for React app to use
+          localStorage.setItem('browserLanguage', langCode);
+        } catch (e) {
+          console.error('Error detecting browser language:', e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

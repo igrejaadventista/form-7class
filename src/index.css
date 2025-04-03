@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add these styles to fix select dropdown responsiveness */
+select {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  select option {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
