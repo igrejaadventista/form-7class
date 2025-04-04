@@ -173,7 +173,7 @@ async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<Web
         submitted_at: new Date().toISOString()
       };
       
-      
+
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: {
@@ -186,6 +186,7 @@ async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<Web
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      
       const result = await response.json();
       
       // Some webhooks might return different success indicators
