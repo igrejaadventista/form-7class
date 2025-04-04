@@ -638,22 +638,25 @@ function App() {
             </div>
           )}
 
-          {/* Novo campo de checkbox logo após o email */}
-          <div className="flex items-start -mt-1">
-            <div className="flex items-center h-5">
-              <input
-                id="acceptEmails"
-                name="acceptEmails"
-                type="checkbox"
-                checked={formData.acceptEmails}
-                onChange={handleInputChange}
-                className="w-4 h-4 bg-[#1A1A1A] border border-gray-800 rounded focus:ring-teal-500 focus:ring-1"
-              />
-            </div>
-            <div className="ml-3 text-sm">
-              <label htmlFor="acceptEmails" className="text-white">
-                {t.acceptEmails?.label || "Aceito receber e-mails da plataforma"}
-              </label>
+          {/* Checkbox para aceitar emails */}
+          <div className="mt-4">
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="acceptEmails"
+                  name="acceptEmails"
+                  type="checkbox"
+                  checked={formData.acceptEmails}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-teal-500 border-gray-700 rounded focus:ring-teal-500 bg-[#1A1A1A]"
+                  required
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="acceptEmails" className="text-gray-300">
+                  {t.acceptEmails} <span className="text-red-500">*</span>
+                </label>
+              </div>
             </div>
           </div>
 
