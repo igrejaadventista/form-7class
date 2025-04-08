@@ -732,79 +732,89 @@ function App() {
             </div>
           </div>
 
-          {/* Campo select para associação (aparece apenas quando um país é selecionado) */}
-          {formData.country && formData.country !== "Outros" && (
-            <div>
-              <label htmlFor="association" className="block text-sm font-medium text-white mb-1">
-                {t.association?.label || "Selecione sua associação"} <span className="text-red-500">*</span>
-              </label>
-              
-              {/* Implementação simplificada com dropdown personalizado */}
-              <div className="relative">
+        {/* Campo select para associação (aparece apenas quando um país é selecionado) */}
+{formData.country && formData.country !== "Outros" && (
+  <div>
+    <label htmlFor="association" className="block text-sm font-medium text-white mb-1">
+      {t.association?.label || "Selecione sua associação"} <span className="text-red-500">*</span>
+    </label>
+
+    {/* Implementação simplificada com dropdown personalizado */}
+    <div className="relative">
+      <div 
+        className="w-full bg-[#1A1A1A] text-white rounded-lg px-4 py-3 border border-gray-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer flex justify-between items-center"
+        onClick={() => setShowAssociationDropdown(!showAssociationDropdown)}
+        aria-required="true"
+      >
+        <span className="truncate">
+          {formData.association || (t.association?.placeholder || "Selecione uma associação")}
+        </span>
+        <svg className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </div>
+
+      {showAssociationDropdown && (
+        <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-gray-800 rounded-lg max-h-60 overflow-y-auto association-dropdown">
+          <div className="sticky top-0 bg-[#1A1A1A] p-2 border-b border-gray-800">
+            <input
+              type="text"
+              id="associationFilter"
+              value={associationFilter}
+              onChange={handleAssociationFilterChange}
+              placeholder={t.association?.filterPlaceholder || "Filtrar associações..."}
+              className="w-full bg-[#222222] text-white rounded-lg px-3 py-2 border border-gray-700 focus:border-teal-500 focus:outline-none"
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          <div>
+            {countryAssociations[formData.country as keyof typeof countryAssociations]
+              ?.filter(association => 
+                !associationFilter || association.toLowerCase().includes(associationFilter.toLowerCase())
+              )
+              .map((association) => (
                 <div 
-                  className="w-full bg-[#1A1A1A] text-white rounded-lg px-4 py-3 border border-gray-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer flex justify-between items-center"
-                  onClick={() => setShowAssociationDropdown(!showAssociationDropdown)}
+                  key={association} 
+                  className={`px-4 py-2 cursor-pointer hover:bg-gray-800 text-white ${
+                    formData.association === association ? 'bg-teal-500/20 border-l-2 border-teal-500' : ''
+                  }`}
+                  onClick={() => {
+                    setFormData({
+                      ...formData,
+                      association: association
+                    });
+                    setAssociationFilter('');
+                    setShowAssociationDropdown(false);
+                  }}
                 >
-                  <span className="truncate">
-                    {formData.association || (t.association?.placeholder || "Selecione uma associação")}
-                  </span>
-                  <svg className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
+                  {association}
                 </div>
-                
-                {showAssociationDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-gray-800 rounded-lg max-h-60 overflow-y-auto association-dropdown">
-                    <div className="sticky top-0 bg-[#1A1A1A] p-2 border-b border-gray-800">
-                      <input
-                        type="text"
-                        id="associationFilter"
-                        value={associationFilter}
-                        onChange={handleAssociationFilterChange}
-                        placeholder={t.association?.filterPlaceholder || "Filtrar associações..."}
-                        className="w-full bg-[#222222] text-white rounded-lg px-3 py-2 border border-gray-700 focus:border-teal-500 focus:outline-none"
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    
-                    <div>
-                      {countryAssociations[formData.country as keyof typeof countryAssociations]
-                        ?.filter(association => 
-                          !associationFilter || association.toLowerCase().includes(associationFilter.toLowerCase())
-                        )
-                        .map((association) => (
-                          <div 
-                            key={association} 
-                            className={`px-4 py-2 cursor-pointer hover:bg-gray-800 text-white ${
-                              formData.association === association ? 'bg-teal-500/20 border-l-2 border-teal-500' : ''
-                            }`}
-                            onClick={() => {
-                              setFormData({
-                                ...formData,
-                                association: association
-                              });
-                              setAssociationFilter('');
-                              setShowAssociationDropdown(false);
-                            }}
-                          >
-                            {association}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Campo oculto para manter a validação do formulário */}
-                <input
-                  type="hidden"
-                  name="association"
-                  value={formData.association}
-                  required
-                />
-              </div>
-            </div>
-          )}
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Campo oculto para manter a validação do formulário */}
+      <input
+        type="hidden"
+        name="association"
+        value={formData.association}
+        required
+        aria-required="true"
+      />
+    </div>
+
+    {/* Mensagem de erro caso a associação não seja selecionada */}
+    {!formData.association && (
+      <p className="text-red-500 text-sm mt-1">
+        {t.association?.error || "Por favor, selecione uma associação."}
+      </p>
+    )}
+  </div>
+)}
+
 
           {/* Checkbox para aceitar emails */}
           <div className="mt-4">
@@ -821,7 +831,7 @@ function App() {
               </div>
               <div className="ml-3 text-sm">
                 <label htmlFor="acceptEmails" className="text-gray-300">
-                  {t.acceptEmails} <span className="text-red-500">*</span>
+                  {t.acceptEmails} 
                 </label>
               </div>
             </div>
