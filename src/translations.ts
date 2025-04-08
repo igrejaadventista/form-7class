@@ -180,7 +180,8 @@ export const translations: { [key: string]: Translation } = {
       },
       association: {
         label: "Select your association",
-        placeholder: "Select an association"
+        placeholder: "Select an association",
+        filterPlaceholder: "Filter associations..."
       },
       successMessage: "Form submitted successfully! Thank you for your registration.",
       errorMessage: "An error occurred while submitting the form. Please try again."
@@ -242,7 +243,8 @@ export const translations: { [key: string]: Translation } = {
       },
       association: {
         label: "Seleccione su asociación",
-        placeholder: "Seleccione una asociación"
+        placeholder: "Seleccione una asociación",
+        filterPlaceholder: "Filtrar asociaciones..."
       },
       successMessage: "¡Formulario enviado con éxito! Gracias por su registro.",
       errorMessage: "Ocurrió un error al enviar el formulario. Por favor, inténtelo de nuevo."

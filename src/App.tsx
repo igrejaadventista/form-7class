@@ -144,21 +144,20 @@ const countryAssociations = {
 }
 ;
 
+// Update the sendWebhookWithRetry function with better error handling
 async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<WebhookResponse> {
-  const WEBHOOK_URL = `https://autoflow.adv.st/webhook/7class`;
+  const WEBHOOK_URL = `https://autoflow.adv.st/webhook-test/7class-dev`;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Attempt ${attempt} of ${maxRetries}`);
       
       // Format the phone with country code - ensure we're only using digits
-      // Remove the '+' from country code if present and concatenate with phone digits
       const countryCodeDigits = data.countryCode.replace(/\D/g, '');
       const phoneDigits = data.phone.replace(/\D/g, '');
       const formattedPhone = countryCodeDigits + phoneDigits;
       
       // Create a payload that matches what the webhook might expect
-      // In sendWebhookWithRetry, update the payload
       const payload = {
         name: data.name,
         email: data.email,
@@ -173,29 +172,94 @@ async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<Web
         submitted_at: new Date().toISOString()
       };
       
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          mode: 'cors', // Try with cors mode explicitly set
+        });
 
-      const response = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Check if response is ok before trying to parse JSON
+        if (!response.ok) {
+          // Handle specific HTTP status codes with more user-friendly messages
+          if (response.status === 409) {
+            throw new Error('Este email já está cadastrado no sistema.');
+          } else if (response.status === 400) {
+            throw new Error('Dados inválidos. Por favor, verifique as informações fornecidas.');
+          } else if (response.status === 401 || response.status === 403) {
+            throw new Error('Sem permissão para realizar esta operação.');
+          } else if (response.status === 404) {
+            throw new Error('Serviço não encontrado.');
+          } else if (response.status === 500) {
+            throw new Error('Erro interno do servidor. Por favor, tente novamente mais tarde.');
+          } else {
+            // Generic error for other status codes
+            throw new Error(`Erro no servidor (${response.status}). Por favor, tente novamente.`);
+          }
+        }
+        
+        // Check if response has content before parsing JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            // Check if response body is empty before parsing
+            const text = await response.text();
+            if (!text || text.trim() === '') {
+              console.log('Empty response body');
+              return { 
+                success: true, 
+                message: 'Operação realizada com sucesso.' 
+              };
+            }
+            
+            // Parse the JSON from the text
+            const result = JSON.parse(text);
+            
+            // Some webhooks might return different success indicators
+            if (result.success === false) {
+              // Return the exact error message from the API response
+              return {
+                success: false,
+                message: result.message || result.error || result.details || 'Webhook request failed'
+              };
+            }
+            
+            // If we get here, assume success even if there's no explicit success flag
+            return { 
+              success: true, 
+              data: result,
+              message: result.message || 'Cadastro realizado com sucesso!'
+            };
+          } catch (error) {
+            console.error('Error parsing JSON:', error);
+            return { 
+              success: false, 
+              message: 'Erro ao processar resposta do servidor.' 
+            };
+          }
+        } else {
+          // Handle empty or non-JSON responses
+          console.log('Response is not JSON or is empty');
+          return { 
+            success: true, 
+            message: 'Operação realizada com sucesso.' 
+          };
+        }
+      } catch (error) {
+        // This will catch network errors including CORS
+        if (error.message.includes('CORS')) {
+          console.error('CORS error detected:', error);
+          return {
+            success: false,
+            message: 'Erro de acesso ao servidor. Por favor, tente novamente mais tarde.'
+          };
+        }
+        throw error; // Re-throw other errors to be handled by the outer catch
       }
-
-      
-      const result = await response.json();
-      
-      // Some webhooks might return different success indicators
-      if (result.success === false) {
-        throw new Error(result.error || result.details || result.message || 'Webhook request failed');
-      }
-      
-      // If we get here, assume success even if there's no explicit success flag
-      return { success: true, data: result };
     } catch (error) {
       console.error(`Attempt ${attempt} failed:`, error);
       
@@ -217,6 +281,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  
+  // Add new state for error popup
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
   
   // Modificar para usar inglês como idioma padrão
   const [language, setLanguage] = useState(() => {
@@ -258,12 +325,16 @@ function App() {
   
   // Add this function to handle selecting an association from the filtered list
   const handleAssociationSelect = (association: string) => {
-    setFormData(prev => ({
-      ...prev,
-      association
-    }));
-    // Don't update the filter with the selected value
-    // This allows users to continue searching
+    console.log("Selected association:", association); // Add logging
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        association: association
+      };
+      console.log("Updated formData:", updated); // Log the updated state
+      return updated;
+    });
+    setAssociationFilter('');
     setShowAssociationDropdown(false);
   };
 
@@ -280,22 +351,69 @@ function App() {
 
   // Remove the first handleInputChange function and keep only this one
   // that handles both input and select elements
+  // Modificar a função handleInputChange para limpar o filtro quando uma associação é selecionada
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
+    
     setFormData(prev => ({ 
       ...prev, 
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value 
     }));
+    
+    // Limpar o filtro quando uma associação é selecionada
+    if (name === 'association' && value) {
+      setAssociationFilter('');
+      setShowAssociationDropdown(false);
+    }
   };
 
   // Fix the handleSubmit function syntax
   // Atualizar o handleSubmit para resetar corretamente todos os campos
+  // Add this function to check if email exists
+  async function checkEmailExists(email: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `https://registration.themembers.dev.br/api/users/show-email/${email}/d02f08b6-cd62-4328-820e-4b1dfdef2607/2eafe9d3-e2b0-4b46-bbe2-50a3fbf1a944`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        // If response is not OK, assume email doesn't exist
+        return false;
+      }
+      
+      const data = await response.json();
+      // If the API returns data with the email, it exists
+      return !!data.email;
+    } catch (error) {
+      console.error('Error checking email:', error);
+      // In case of error, continue with form submission
+      return false;
+    }
+  }
+
+  // Update the handleSubmit function to check email before submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
     setLoading(true);
 
     try {
+      // Check if email exists before submitting
+      const emailExists = await checkEmailExists(formData.email);
+      
+      if (emailExists) {
+        setSubmitError('Este e-mail já está cadastrado em nosso sistema.');
+        setShowErrorPopup(true); // Show error popup
+        setLoading(false);
+        return;
+      }
+      
       const result = await sendWebhookWithRetry(formData);
       
       // In handleSubmit, update the form reset
@@ -323,14 +441,27 @@ function App() {
         }, 5000);
       } else {
         setSubmitError(result.message || 'Ocorreu um erro ao enviar o formulário');
+        setShowErrorPopup(true); // Show error popup
       }
     } catch (error) {
       console.error('Form submission error:', error);
       setSubmitError('Falha ao enviar formulário. Por favor, tente novamente.');
+      setShowErrorPopup(true); // Show error popup
     } finally {
       setLoading(false);
     }
   };
+
+  // Add useEffect to auto-hide error popup after 5 seconds
+  useEffect(() => {
+    if (showErrorPopup) {
+      const timer = setTimeout(() => {
+        setShowErrorPopup(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showErrorPopup]);
 
   // Move the useEffect hook inside the component
   useEffect(() => {
@@ -385,6 +516,32 @@ function App() {
             </div>
             <h3 className="text-xl font-medium text-white text-center">Formulário enviado com sucesso!</h3>
             <p className="text-gray-400 text-center mt-2">Obrigado pelo seu cadastro.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Popup */}
+      {showErrorPopup && submitError && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowErrorPopup(false)}></div>
+          <div className="bg-[#1A1A1A] rounded-lg p-6 shadow-xl max-w-md w-full relative z-10 border border-red-500/20">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-red-500/20 rounded-full p-3">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-xl font-medium text-white text-center">Erro</h3>
+            <p className="text-red-400 text-center mt-2">{submitError}</p>
+            <div className="mt-4 flex justify-center">
+              <button 
+                onClick={() => setShowErrorPopup(false)}
+                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -576,66 +733,75 @@ function App() {
           </div>
 
           {/* Campo select para associação (aparece apenas quando um país é selecionado) */}
-          {/* Replace the existing association select implementation */}
           {formData.country && formData.country !== "Outros" && (
             <div>
               <label htmlFor="association" className="block text-sm font-medium text-white mb-1">
-                Selecione sua associação <span className="text-red-500">*</span>
+                {t.association?.label || "Selecione sua associação"} <span className="text-red-500">*</span>
               </label>
               
-              {/* Search input for filtering */}
-              <div className="relative mb-2">
-                <input
-                  id="associationFilter"
-                  type="text"
-                  value={associationFilter}
-                  onChange={handleAssociationFilterChange}
-                  onFocus={() => setShowAssociationDropdown(true)}
-                  placeholder="Digite para filtrar associações"
-                  className="w-full bg-[#1A1A1A] text-white rounded-lg px-4 py-3 border border-gray-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-                
-                {showAssociationDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-gray-800 rounded-lg max-h-60 overflow-y-auto association-dropdown">
-                    {countryAssociations[formData.country as keyof typeof countryAssociations]
-                      ?.filter(association => 
-                        association.toLowerCase().includes((associationFilter || '').toLowerCase())
-                      )
-                      .map((association) => (
-                        <div 
-                          key={association} 
-                          className="px-4 py-2 cursor-pointer hover:bg-gray-800 text-white"
-                          onClick={() => handleAssociationSelect(association)}
-                        >
-                          {association}
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-              
-              {/* Display selected association */}
+              {/* Implementação simplificada com dropdown personalizado */}
               <div className="relative">
-                <select
-                  id="association"
-                  name="association"
-                  value={formData.association}
-                  onChange={handleInputChange}
-                  className="w-full bg-[#1A1A1A] text-white rounded-lg px-4 py-3 border border-gray-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 appearance-none"
-                  required
+                <div 
+                  className="w-full bg-[#1A1A1A] text-white rounded-lg px-4 py-3 border border-gray-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer flex justify-between items-center"
+                  onClick={() => setShowAssociationDropdown(!showAssociationDropdown)}
                 >
-                  <option value="" disabled>Selecione uma associação</option>
-                  {countryAssociations[formData.country as keyof typeof countryAssociations]?.map((association) => (
-                    <option key={association} value={association}>
-                      {association}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <span className="truncate">
+                    {formData.association || (t.association?.placeholder || "Selecione uma associação")}
+                  </span>
+                  <svg className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </div>
+                
+                {showAssociationDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-gray-800 rounded-lg max-h-60 overflow-y-auto association-dropdown">
+                    <div className="sticky top-0 bg-[#1A1A1A] p-2 border-b border-gray-800">
+                      <input
+                        type="text"
+                        id="associationFilter"
+                        value={associationFilter}
+                        onChange={handleAssociationFilterChange}
+                        placeholder={t.association?.filterPlaceholder || "Filtrar associações..."}
+                        className="w-full bg-[#222222] text-white rounded-lg px-3 py-2 border border-gray-700 focus:border-teal-500 focus:outline-none"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    
+                    <div>
+                      {countryAssociations[formData.country as keyof typeof countryAssociations]
+                        ?.filter(association => 
+                          !associationFilter || association.toLowerCase().includes(associationFilter.toLowerCase())
+                        )
+                        .map((association) => (
+                          <div 
+                            key={association} 
+                            className={`px-4 py-2 cursor-pointer hover:bg-gray-800 text-white ${
+                              formData.association === association ? 'bg-teal-500/20 border-l-2 border-teal-500' : ''
+                            }`}
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                association: association
+                              });
+                              setAssociationFilter('');
+                              setShowAssociationDropdown(false);
+                            }}
+                          >
+                            {association}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Campo oculto para manter a validação do formulário */}
+                <input
+                  type="hidden"
+                  name="association"
+                  value={formData.association}
+                  required
+                />
               </div>
             </div>
           )}
@@ -651,7 +817,6 @@ function App() {
                   checked={formData.acceptEmails}
                   onChange={handleInputChange}
                   className="h-4 w-4 text-teal-500 border-gray-700 rounded focus:ring-teal-500 bg-[#1A1A1A]"
-                  required
                 />
               </div>
               <div className="ml-3 text-sm">
