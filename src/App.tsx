@@ -146,7 +146,7 @@ const countryAssociations = {
 
 // Update the sendWebhookWithRetry function with better error handling
 async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<WebhookResponse> {
-  const WEBHOOK_URL = `https://autoflow.adv.st/webhook-test/7class-dev`;
+  const WEBHOOK_URL = `https://autoflow.adv.st/webhook/7class`;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
