@@ -323,20 +323,20 @@ function App() {
     setAssociationFilter(e.target.value);
   };
   
-  // Add this function to handle selecting an association from the filtered list
-  const handleAssociationSelect = (association: string) => {
-    console.log("Selected association:", association); // Add logging
-    setFormData(prev => {
-      const updated = {
-        ...prev,
-        association: association
-      };
-      console.log("Updated formData:", updated); // Log the updated state
-      return updated;
-    });
-    setAssociationFilter('');
-    setShowAssociationDropdown(false);
-  };
+  // // Add this function to handle selecting an association from the filtered list
+  // const handleAssociationSelect = (association: string) => {
+  //   console.log("Selected association:", association); // Add logging
+  //   setFormData(prev => {
+  //     const updated = {
+  //       ...prev,
+  //       association: association
+  //     };
+  //     console.log("Updated formData:", updated); // Log the updated state
+  //     return updated;
+  //   });
+  //   setAssociationFilter('');
+  //   setShowAssociationDropdown(false);
+  // };
 
   // Modify the existing handleCountryChange function to reset the association filter
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -366,54 +366,25 @@ function App() {
       setShowAssociationDropdown(false);
     }
   };
-
-  // Fix the handleSubmit function syntax
-  // Atualizar o handleSubmit para resetar corretamente todos os campos
-  // Add this function to check if email exists
-  async function checkEmailExists(email: string): Promise<boolean> {
-    try {
-      const response = await fetch(
-        `https://registration.themembers.dev.br/api/users/show-email/${email}/d02f08b6-cd62-4328-820e-4b1dfdef2607/2eafe9d3-e2b0-4b46-bbe2-50a3fbf1a944`,
-        {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-        }
-      );
-      
-      if (!response.ok) {
-        // If response is not OK, assume email doesn't exist
-        return false;
-      }
-      
-      const data = await response.json();
-      // If the API returns data with the email, it exists
-      return !!data.email;
-    } catch (error) {
-      console.error('Error checking email:', error);
-      // In case of error, continue with form submission
-      return false;
-    }
-  }
+  
 
   // Update the handleSubmit function to check email before submission
+  // Update the handleSubmit function to validate association
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+    
+    // Check if country is selected and not "Outros" but association is empty
+    if (formData.country && formData.country !== "Outros" && !formData.association) {
+      setSubmitError('Por favor, selecione uma associação.');
+      setShowErrorPopup(true);
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      // Check if email exists before submitting
-      const emailExists = await checkEmailExists(formData.email);
-      
-      if (emailExists) {
-        setSubmitError('Este e-mail já está cadastrado em nosso sistema.');
-        setShowErrorPopup(true); // Show error popup
-        setLoading(false);
-        return;
-      }
-      
+  
       const result = await sendWebhookWithRetry(formData);
       
       // In handleSubmit, update the form reset
@@ -733,87 +704,78 @@ function App() {
           </div>
 
         {/* Campo select para associação (aparece apenas quando um país é selecionado) */}
-{formData.country && formData.country !== "Outros" && (
-  <div>
-    <label htmlFor="association" className="block text-sm font-medium text-white mb-1">
-      {t.association?.label || "Selecione sua associação"} <span className="text-red-500">*</span>
-    </label>
-
-    {/* Implementação simplificada com dropdown personalizado */}
-    <div className="relative">
-      <div 
-        className="w-full bg-[#1A1A1A] text-white rounded-lg px-4 py-3 border border-gray-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer flex justify-between items-center"
-        onClick={() => setShowAssociationDropdown(!showAssociationDropdown)}
-        aria-required="true"
-      >
-        <span className="truncate">
-          {formData.association || (t.association?.placeholder || "Selecione uma associação")}
-        </span>
-        <svg className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </div>
-
-      {showAssociationDropdown && (
-        <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-gray-800 rounded-lg max-h-60 overflow-y-auto association-dropdown">
-          <div className="sticky top-0 bg-[#1A1A1A] p-2 border-b border-gray-800">
-            <input
-              type="text"
-              id="associationFilter"
-              value={associationFilter}
-              onChange={handleAssociationFilterChange}
-              placeholder={t.association?.filterPlaceholder || "Filtrar associações..."}
-              className="w-full bg-[#222222] text-white rounded-lg px-3 py-2 border border-gray-700 focus:border-teal-500 focus:outline-none"
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-
+        {formData.country && formData.country !== "Outros" && (
           <div>
-            {countryAssociations[formData.country as keyof typeof countryAssociations]
-              ?.filter(association => 
-                !associationFilter || association.toLowerCase().includes(associationFilter.toLowerCase())
-              )
-              .map((association) => (
-                <div 
-                  key={association} 
-                  className={`px-4 py-2 cursor-pointer hover:bg-gray-800 text-white ${
-                    formData.association === association ? 'bg-teal-500/20 border-l-2 border-teal-500' : ''
-                  }`}
-                  onClick={() => {
-                    setFormData({
-                      ...formData,
-                      association: association
-                    });
-                    setAssociationFilter('');
-                    setShowAssociationDropdown(false);
-                  }}
-                >
-                  {association}
+            <label htmlFor="association" className="block text-sm font-medium text-white mb-1">
+              {t.association?.label || "Selecione sua associação"} <span className="text-red-500">*</span>
+            </label>
+        
+            {/* Implementação simplificada com dropdown personalizado */}
+            <div className="relative">
+              <div 
+                className="w-full bg-[#1A1A1A] text-white rounded-lg px-4 py-3 border border-gray-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer flex justify-between items-center"
+                onClick={() => setShowAssociationDropdown(!showAssociationDropdown)}
+              >
+                <span className="truncate">
+                  {formData.association || (t.association?.placeholder || "Selecione uma associação")}
+                </span>
+                <svg className="h-5 w-5 text-gray-400 flex-shrink-0 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </div>
+        
+              {showAssociationDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-gray-800 rounded-lg max-h-60 overflow-y-auto association-dropdown">
+                  <div className="sticky top-0 bg-[#1A1A1A] p-2 border-b border-gray-800">
+                    <input
+                      type="text"
+                      id="associationFilter"
+                      value={associationFilter}
+                      onChange={handleAssociationFilterChange}
+                      placeholder={t.association?.filterPlaceholder || "Filtrar associações..."}
+                      className="w-full bg-[#222222] text-white rounded-lg px-3 py-2 border border-gray-700 focus:border-teal-500 focus:outline-none"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+        
+                  <div>
+                    {countryAssociations[formData.country as keyof typeof countryAssociations]
+                      ?.filter(association => 
+                        !associationFilter || association.toLowerCase().includes(associationFilter.toLowerCase())
+                      )
+                      .map((association) => (
+                        <div 
+                          key={association} 
+                          className={`px-4 py-2 cursor-pointer hover:bg-gray-800 text-white ${
+                            formData.association === association ? 'bg-teal-500/20 border-l-2 border-teal-500' : ''
+                          }`}
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              association: association
+                            });
+                            setAssociationFilter('');
+                            setShowAssociationDropdown(false);
+                          }}
+                        >
+                          {association}
+                        </div>
+                      ))}
+                  </div>
                 </div>
-              ))}
+              )}
+        
+              {/* Campo oculto para manter a validação do formulário */}
+              <input
+                type="hidden"
+                name="association"
+                value={formData.association}
+                required
+              />
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Campo oculto para manter a validação do formulário */}
-      <input
-        type="hidden"
-        name="association"
-        value={formData.association}
-        required
-        aria-required="true"
-      />
-    </div>
-
-    {/* Mensagem de erro caso a associação não seja selecionada */}
-    {!formData.association && (
-      <p className="text-red-500 text-sm mt-1">
-        {t.association?.error || "Por favor, selecione uma associação."}
-      </p>
-    )}
-  </div>
-)}
+        )}
 
 
           {/* Checkbox para aceitar emails */}
