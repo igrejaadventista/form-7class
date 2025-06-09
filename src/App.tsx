@@ -20,12 +20,24 @@ interface FormData {
   association: string; // New field for association selection
 }
 
+// Update the WebhookResponse interface
 interface WebhookResponse {
   success: boolean;
   message?: string;
   error?: string;
   details?: string;
   data?: any;
+}
+
+// Update the translations interface in the file
+interface Translation {
+  // ... existing fields ...
+  association?: {
+    label: string;
+    placeholder: string;
+    filterPlaceholder?: string; // Add this field
+  };
+  // ... rest of the fields ...
 }
 
 // Move the countryAssociations object here, before it's used
@@ -147,6 +159,40 @@ const countryAssociations = {
 }
 ;
 
+// Add this function after the countryAssociations object
+const getPhoneMask = (countryCode: string) => {
+  switch (countryCode) {
+    case '+55': // Brazil
+      return '(99) 99999-9999';
+    case '+1': // USA, Canada
+      return '(999) 999-9999';
+    case '+44': // UK
+      return '99999 999999';
+    case '+34': // Spain
+      return '999 999 999';
+    case '+351': // Portugal
+      return '999 999 999';
+    case '+54': // Argentina
+      return '(999) 999-9999';
+    case '+56': // Chile
+      return '9 9999 9999';
+    case '+57': // Colombia
+      return '999 999 9999';
+    case '+58': // Venezuela
+      return '999-999-9999';
+    case '+593': // Ecuador
+      return '999 999 999';
+    case '+595': // Paraguay
+      return '999 999 999';
+    case '+598': // Uruguay
+      return '999 999 999';
+    case '+51': // Peru
+      return '999 999 999';
+    default:
+      return '999999999999999'; // Generic mask for other countries
+  }
+};
+
 // Update the sendWebhookWithRetry function with better error handling
 async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<WebhookResponse> {
   const WEBHOOK_URL = `https://autoflow.adv.st/webhook/7class`;
@@ -254,7 +300,7 @@ async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<Web
         }
       } catch (error) {
         // This will catch network errors including CORS
-        if (error.message.includes('CORS')) {
+        if (error instanceof Error && error.message.includes('CORS')) {
           console.error('CORS error detected:', error);
           return {
             success: false,
@@ -269,7 +315,7 @@ async function sendWebhookWithRetry(data: FormData, maxRetries = 3): Promise<Web
       if (attempt === maxRetries) {
         return { 
           success: false, 
-          message: `Falha ao enviar formulário: ${error.message}. Por favor, tente novamente.`
+          message: `Falha ao enviar formulário: ${error instanceof Error ? error.message : 'Erro desconhecido'}. Por favor, tente novamente.`
         };
       }
       // Wait before retrying (exponential backoff)
@@ -310,7 +356,7 @@ function App() {
     acceptEmails: false,
     referralSource: '',
     platformLanguage: '', // Changed from 'pt' to empty string
-    country: '', // Default empty
+    country: 'Brasil', // Set Brazil as default country
     association: '' // Default empty
   });
 
@@ -405,7 +451,7 @@ function App() {
         acceptEmails: false,
         referralSource: '',
         platformLanguage: 'pt',
-        country: '',
+        country: 'Brasil',
         association: ''
       });
       
@@ -417,10 +463,11 @@ function App() {
         setSubmitError(result.message || 'Ocorreu um erro ao enviar o formulário');
         setShowErrorPopup(true); // Show error popup
       }
-    } catch (error) {
-      console.error('Form submission error:', error);
-      setSubmitError('Falha ao enviar formulário. Por favor, tente novamente.');
-      setShowErrorPopup(true); // Show error popup
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error('An unknown error occurred');
     } finally {
       setLoading(false);
     }
@@ -567,14 +614,20 @@ function App() {
               <div className="relative w-24">
                 <CountrySelect 
                   value={formData.countryCode}
-                  onChange={(dialCode) => setFormData(prev => ({ ...prev, countryCode: dialCode }))}
+                  onChange={(dialCode) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      countryCode: dialCode,
+                      phone: '' // Clear phone when country changes
+                    }));
+                  }}
                 />
               </div>
               <div className="relative flex-1">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <InputMask
                   id="phone"
-                  mask="(99) 99999-9999"
+                  mask={getPhoneMask(formData.countryCode)}
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}

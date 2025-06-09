@@ -55,6 +55,7 @@ interface Translation {
     association?: {
       label: string;
       placeholder: string;
+      filterPlaceholder?: string;
     };
     successMessage: string;
     errorMessage: string;
